@@ -25,7 +25,15 @@
 <body>
     <h1>Photo Viewer App</h1>
 
-    {% block content %}{% endblock %}
+    {% block content %}
+        <div class="photo-container">
+            {% for photo_url in photos %}
+                <div class="photo">
+                    <img src="{{ photo_url }}" alt="Photo" />
+                </div>
+            {% endfor %}
+        </div>
+    {% endblock %}
 
     <form method="post" action="/upload" enctype="multipart/form-data">
         <input type="file" name="photo" accept=".jpg" />
@@ -37,27 +45,23 @@
     <button type="button" onclick="processAction('Anuleaza actiunea')">Anuleaza actiunea</button>
 
     <script>
+        // Function to process button actions
         function processAction(action) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/process_action', true);
-            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-
-            var data = {
-                action: action
-            };
-
-            xhr.send(JSON.stringify(data));
-
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    alert('Action processed successfully.');
-                    // You may want to refresh the page to display the updated photos.
-                    location.reload();
-                } else {
-                    alert('Error processing action.');
-                }
-            };
+            // Handle button actions, e.g., send a request to the server
+            // to process the action based on the 'action' parameter.
+            // You can use JavaScript or AJAX to communicate with the server.
         }
+
+        // Function to process keyboard events
+        function processKeyboardEvent(event) {
+            if (event.key === 'ArrowLeft') {
+                processAction('Gresit');
+            } else if (event.key === 'ArrowRight') {
+                processAction('Corect');
+            }
+        }
+
+        document.addEventListener('keydown', processKeyboardEvent);
     </script>
 </body>
 </html>
