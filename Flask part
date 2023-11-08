@@ -7,15 +7,14 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 # Configure Dropbox API credentials
-DROPBOX_ACCESS_TOKEN = 'sl.BpaDlDTT097cSoq1X5sdkYju5mWEMObjtLcAdnE3nDtgP64Z5E5VnfAB-b96syJzWiMSIgckgI4pfMG5VSd_heum2UqbUDRdoYsB3qoR7vTRVKhL0DHROAZ0e-NmqYMR0VT0dp6UrYTnRrU'  
-SHARED_LINK = 'https://www.dropbox.com/scl/fo/ldzx6pk410shz1x5smb4s/h?rlkey=04r5zs0nieqx9bi582p4fwovr&dl=0'  
+DROPBOX_ACCESS_TOKEN = 'YOUR_DROPBOX_ACCESS_TOKEN'
+SHARED_LINK = 'YOUR_SHARED_LINK'
 
 # Initialize the Dropbox client
 dbx = Dropbox(DROPBOX_ACCESS_TOKEN)
 
 # Function to create folders in Dropbox
 def create_folders_in_dropbox():
-   s
     folder_names = ["Wrong", "Correct"]
 
     for folder_name in folder_names:
@@ -29,9 +28,8 @@ def create_folders_in_dropbox():
             else:
                 print(f"Failed to create folder '{folder_name}' in Dropbox: {e}")
 
-
+# Function to fetch photos from Dropbox
 def fetch_photos_from_dropbox():
-   
     photos = []
     try:
         for entry in dbx.files_list_folder(SHARED_LINK).entries:
@@ -39,35 +37,31 @@ def fetch_photos_from_dropbox():
                 photo_url = dbx.files_get_temporary_link(entry.path_display).link
                 photos.append({'url': photo_url, 'path': entry.path_display})
     except Exception as e:
-        # Handle any errors or exceptions
         print(f"Error fetching photos from Dropbox: {e}")
     return photos
 
-# Define a route to render the main page
+# Route to render the main page
 @app.route('/')
 def index():
-    # Fetch photos from Dropbox
     photos = fetch_photos_from_dropbox()
     return render_template('main.html', photos=photos)
 
-# Define a route to handle file upload
+# Route to handle file upload
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'photo' in request.files:
         photo = request.files['photo']
         if photo.filename != '':
-            # Ensure a secure filename and save the uploaded photo to Dropbox
             filename = secure_filename(photo.filename)
             upload_photo_to_dropbox(photo, filename)
     return redirect(url_for('index'))
 
-# Implement function to upload a photo to Dropbox
+# Function to upload a photo to Dropbox
 def upload_photo_to_dropbox(photo, filename):
-    # Save the uploaded photo to a specific folder in Dropbox
     with photo.stream as f:
         dbx.files_upload(f.read(), f'/photos/{filename}', mode=WriteMode('add', None), autorename=True)
 
-# Define a route to process actions
+# Route to process actions
 @app.route('/process_action', methods=['POST'])
 def process_action():
     action = request.json.get('action')
@@ -81,15 +75,28 @@ def process_action():
 
 # Function to move photos to a specific folder in Dropbox
 def move_photos_to_folder(folder_name):
-    # Get the list of photos to move based on the folder name
     photos_to_move = [photo for photo in fetch_photos_from_dropbox() if folder_name.lower() in photo['url'].lower()]
     for photo in photos_to_move:
         source_path = photo['path']
         target_path = f'/{folder_name}/{source_path.split("/")[-1]}'
         dbx.files_move(source_path, target_path)
 
+# Route to list files in a specific folder
+@app.route('/list_folder/<folder_name>')
+def list_folder(folder_name):
+    files = list_files_in_folder("/" + folder_name)
+    return render_template('list_folder.html', folder_name=folder_name, files=files)
+
+# Function to list files within a specific folder using the Dropbox API
+def list_files_in_folder(folder_path):
+    files = []
+    try:
+        for entry in dbx.files_list_folder(folder_path).entries:
+            files.append(entry.name)
+    except Exception as e:
+        print(f"Error listing files in Dropbox folder: {e}")
+    return files
+
 if __name__ == '__main':
-    # Create folders in Dropbox
     create_folders_in_dropbox()
-    # Run the Flask application
     app.run(debug=True)
